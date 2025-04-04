@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server';
 import { StocksService } from '@/services/stocks/stocks.service';
-import { AlphaVantageProvider } from '@/services/stocks/providers/alpha-vantage.provider';
+import { YahooFinanceProvider } from '@/services/stocks/providers/yahoo-finance.provider';
 
 export async function GET(request: Request) {
   try {
-    const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
-    if (!apiKey) {
-      throw new Error('Alpha Vantage API key is not configured');
-    }
-
     const { searchParams } = new URL(request.url);
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     const symbol = searchParams.get('symbol');
 
-    const provider = new AlphaVantageProvider(apiKey);
+    const provider = new YahooFinanceProvider();
     const service = new StocksService(provider);
 
     if (from && to && symbol) {

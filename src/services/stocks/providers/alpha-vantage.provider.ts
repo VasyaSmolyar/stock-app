@@ -1,4 +1,5 @@
 import { StockProvider, StockQuote, HistoricalQuote } from '../types';
+import { formatMarketCap } from '../utils';
 
 export class AlphaVantageProvider implements StockProvider {
   private readonly baseUrl = 'https://www.alphavantage.co/query';
@@ -25,7 +26,7 @@ export class AlphaVantageProvider implements StockProvider {
     await this.waitForRateLimit();
 
     const response = await fetch(
-      `${this.baseUrl}?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=compact&apikey=${this.apiKey}`
+      `${this.baseUrl}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${this.apiKey}`
     );
 
     if (!response.ok) {
@@ -33,34 +34,29 @@ export class AlphaVantageProvider implements StockProvider {
     }
 
     const data = await response.json();
-    
-    if (data['Note']) {
-      throw new Error('API rate limit exceeded. Please try again later.');
-    }
-
     const timeSeries = data['Time Series (Daily)'];
-    if (!timeSeries) {
-      throw new Error(`No data available for ${symbol}`);
-    }
-
-    // Get the latest available quote
-    const dates = Object.keys(timeSeries);
+    const dates = Object.keys(timeSeries).sort();
     const latestDate = dates[0];
     const previousDate = dates[1];
-    const latestQuote = timeSeries[latestDate];
-    const previousQuote = timeSeries[previousDate];
+    const latestData = timeSeries[latestDate];
+    const previousData = timeSeries[previousDate];
+
+    const currentPrice = parseFloat(latestData['4. close']);
+    const previousClose = parseFloat(previousData['4. close']);
+    const change = currentPrice - previousClose;
+    const changePercent = (change / previousClose) * 100;
 
     return {
       symbol: symbol,
-      price: parseFloat(latestQuote['4. close']),
-      change: parseFloat(latestQuote['4. close']) - parseFloat(previousQuote['4. close']),
-      changePercent: ((parseFloat(latestQuote['4. close']) - parseFloat(previousQuote['4. close'])) / parseFloat(previousQuote['4. close'])) * 100,
-      previousClose: parseFloat(previousQuote['4. close']),
-      open: parseFloat(latestQuote['1. open']),
-      dayHigh: parseFloat(latestQuote['2. high']),
-      dayLow: parseFloat(latestQuote['3. low']),
-      volume: parseInt(latestQuote['5. volume']),
-      marketCap: 0,
+      price: currentPrice,
+      change: change,
+      changePercent: changePercent,
+      previousClose: previousClose,
+      open: parseFloat(latestData['1. open']),
+      dayHigh: parseFloat(latestData['2. high']),
+      dayLow: parseFloat(latestData['3. low']),
+      volume: parseFloat(latestData['5. volume']),
+      marketCap: formatMarketCap(currentPrice, parseFloat(latestData['5. volume'])),
       timestamp: new Date(latestDate)
     };
   }

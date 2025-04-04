@@ -8,7 +8,7 @@ export interface StockQuote {
   dayHigh: number;
   dayLow: number;
   volume: number;
-  marketCap: number;
+  marketCap: string;
   timestamp: Date;
 }
 
